@@ -1,12 +1,15 @@
 class PasswordValidator
   REQUIRED = {
-    byr: { regex: /byr:(\d{4})\b/, min: 1920, max: 2002 },
-    iyr: { regex: /iyr:(\d{4})\b/, min: 2010, max: 2020 },
-    eyr: { regex: /eyr:(\d{4})\b/, min: 2020, max: 2030 },
-    hgt: { regex: /hgt:(\d{2,3})(cm|in)\b/, min: [150, 59], max: [193, 76] },
-    hcl: { regex: /hcl:#[0-9a-f]{6}\b/ },
-    ecl: { regex: /ecl:(?:amb|blu|brn|gry|grn|hzl|oth)\b/ },
-    pid: { regex: /pid:\d{9}\b/ }
+    hcl: ->(pp) { pp.match? /hcl:#[0-9a-f]{6}\b/ },
+    ecl: ->(pp) { pp.match? /ecl:(?:amb|blu|brn|gry|grn|hzl|oth)\b/ },
+    pid: ->(pp) { pp.match? /pid:\d{9}\b/ },
+    byr: ->(pp) { pp.match(/byr:(\d{4})\b/)&.captures[0]&.to_i&.between?(1920, 2002) },
+    iyr: ->(pp) { pp.match(/iyr:(\d{4})\b/)&.captures[0]&.to_i&.between?(2010, 2020) },
+    eyr: ->(pp) { pp.match(/eyr:(\d{4})\b/)&.captures[0]&.to_i&.between?(2020, 2030) },
+    hgt: ->(pp) do
+      match = pp.match(/hgt:(?<hgt>\d{2,3})(?<unit>cm|in)\b/)
+      match && match[:hgt].to_i.between?(*(match[:unit] == "cm" ? [150, 193] : [59, 76]))
+    end
   }
 
   OPTIONAL = "cid"
@@ -28,19 +31,7 @@ class PasswordValidator
   end
 
   def check_harder
-    REQUIRED.all? do |field, rules|
-      return false unless (match = passport.match(rules[:regex]))
-
-      if match.size == 1
-        true
-      elsif match.size == 2
-        match[1].to_i.between?(rules[:min], rules[:max])
-      elsif match[2] == "cm"
-        match[1].to_i.between?(rules[:min][0], rules[:max][0])
-      else
-        match[1].to_i.between?(rules[:min][1], rules[:max][1])
-      end
-    end
+    REQUIRED.all? { |field, validator| instance_exec(passport, &validator) }
   end
 end
 
