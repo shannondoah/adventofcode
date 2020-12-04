@@ -31,7 +31,7 @@ class PasswordValidator
   end
 
   def check_harder
-    REQUIRED.all? { |field, validator| instance_exec(passport, &validator) }
+    REQUIRED.values.all? { |validator| instance_exec(passport, &validator) }
   end
 end
 
