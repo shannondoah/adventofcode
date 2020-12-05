@@ -1,6 +1,15 @@
 class BoardingPass
+  ROWS = 127
+  SEATS = 7
   UPPER = %w[B R]
   LOWER = %w[F L]
+
+  ALL_SEAT_IDS = (0..ROWS).to_a.flat_map { |y| (0..SEATS).to_a.map { |x| y * 8 + x } }
+
+  def self.find_empty_seat(passes)
+    occupied = passes.map { |pass| new(pass).seat_id }
+    (ALL_SEAT_IDS - occupied).detect { |id| occupied.include?(id-1) && occupied.include?(id+1) }
+  end
 
   def initialize(passcode)
     @rowcode = passcode[0..6]
@@ -8,11 +17,11 @@ class BoardingPass
   end
 
   def row
-    @row ||= find(0, 127, @rowcode)
+    @row ||= find(0, ROWS, @rowcode)
   end
 
   def seat
-    @seat ||= find(0, 7, @seatcode[-3..@seatcode.length])
+    @seat ||= find(0, SEATS, @seatcode[-3..@seatcode.length])
   end
 
   def seat_id
@@ -39,4 +48,4 @@ class BoardingPass
 end
 
 passes = File.read(File.expand_path('input.txt', File.dirname(__FILE__))).split("\n")
-puts passes.map { |pass| BoardingPass.new(pass).seat_id }.max
+puts BoardingPass.find_empty_seat(passes)
