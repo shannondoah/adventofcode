@@ -23,26 +23,40 @@ class FerryDocker
 
     program.each_with_object({}) do |line, obj|
       mem, val = line.scan(/mem\[(\d+).*?(\d+)\z/).flatten
-      masked_val = apply_mask(mask, in_bits(val))
+      masked_addr = apply_mask(mask, in_bits(mem))
+      floating_addrs = get_floating_addresses(masked_addr)
 
-      memory[mem] = masked_val.to_i(2)
+      write_values_to_memory(floating_addrs, val)
     end
   end
 
   def in_bits(value)
-    value = value.to_i.to_s(2)
-    ([0] * (BITS - value.length)).join + value
+    value = value.to_i.to_s(2).rjust(36, '0')
   end
 
-  def apply_mask(mask, value)
-    value = value.split("")
-    mask.split("").each_with_index do |bit, i|
-      next if bit == "X"
+   def apply_mask(mask, addr)
+    mask.chars.each_with_index do |bit, i|
+      next if bit == "0"
 
-      value[i] = bit
+      addr[i] = bit
     end
 
-    value.join
+    addr
+  end
+
+  def get_floating_addresses(addr)
+    x_combos = %w[0 1].repeated_permutation(addr.count('X')).to_a
+
+    x_combos.each_with_object([]) do |combo, array|
+      new_address = addr.dup
+      addr.chars.each { |c| new_address.sub!("X", combo.shift) if c == "X" }
+
+      array << new_address
+    end
+  end
+
+  def write_values_to_memory(addresses, value)
+    addresses.each { |address| memory[address.to_i(2)] = value }
   end
 end
 
